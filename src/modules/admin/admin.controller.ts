@@ -54,6 +54,10 @@ export class AdminController {
     @Body('playlistName') playlistName: string,
     @Body('sequenceOrder') sequenceOrder: number,
     @Body('hlsUrl') hlsUrl: string,
+    @Body('courseId') courseId?: string,
+    @Body('semester') semester?: number,
+    @Body('subjectId') subjectId?: string,
+    @Body('unit') unit?: number,
   ) {
     return this.adminService.createVideo(
       title,
@@ -62,6 +66,10 @@ export class AdminController {
       playlistName,
       sequenceOrder,
       hlsUrl,
+      courseId,
+      semester,
+      subjectId,
+      unit,
     );
   }
 
@@ -82,6 +90,8 @@ export class AdminController {
     @Body('year') year: number,
     @Body('fileKey') fileKey: string,
     @Body('price') price: number,
+    @Body('courseId') courseId?: string,
+    @Body('subjectId') subjectId?: string,
   ) {
     return this.adminService.createContent(
       title,
@@ -93,6 +103,8 @@ export class AdminController {
       year || null,
       fileKey,
       price,
+      courseId,
+      subjectId,
     );
   }
 
@@ -221,5 +233,16 @@ export class AdminController {
   @HttpCode(HttpStatus.OK)
   async restoreBundle(@Param('id') id: string) {
     return this.adminService.archiveBundle(id, false);
+  }
+
+  @Get('toppers-pass')
+  async getToppersPass() {
+    return this.adminService.getToppersPassContentIds();
+  }
+
+  @Post('toppers-pass')
+  @HttpCode(HttpStatus.OK)
+  async updateToppersPass(@Body('contentIds') contentIds: string[]) {
+    return this.adminService.updateToppersPassContentIds(contentIds);
   }
 }

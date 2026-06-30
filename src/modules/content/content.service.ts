@@ -14,6 +14,8 @@ export class ContentService {
   ) {}
 
   async getCatalog(
+    userId: string,
+    role: string,
     type?: 'note' | 'pyq',
     category?: string,
     semester?: number,
@@ -53,7 +55,30 @@ export class ContentService {
     params.push(limit, offset);
 
     const res = await this.db.query(queryText, params);
-    return res.rows;
+    
+    const items = [];
+    for (const row of res.rows) {
+      const hasAccess = await this.checkAccess(userId, row.id, role);
+      items.push({
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        type: row.type,
+        category: row.category,
+        semester: row.semester,
+        subject: row.subject,
+        year: row.year,
+        fileKey: row.file_key,
+        price: parseFloat(row.price),
+        isAvailable: row.is_available,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        subjectId: row.subject_id,
+        courseId: row.course_id,
+        hasAccess,
+      });
+    }
+    return items;
   }
 
   async getBundles(limit = 10, offset = 0) {

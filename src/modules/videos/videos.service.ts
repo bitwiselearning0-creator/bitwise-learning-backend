@@ -21,7 +21,19 @@ export class VideosService {
     params.push(limit, offset);
 
     const res = await this.db.query(queryText, params);
-    return res.rows;
+    return res.rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      youtubeVideoId: row.youtube_video_id,
+      playlistName: row.playlist_name,
+      sequenceOrder: row.sequence_order,
+      hlsUrl: row.hls_url,
+      courseId: row.course_id,
+      semester: row.semester,
+      subjectId: row.subject_id,
+      unit: row.unit,
+    }));
   }
 
   async getPlaylists() {

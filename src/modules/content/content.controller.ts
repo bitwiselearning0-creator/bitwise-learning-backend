@@ -20,6 +20,7 @@ export class ContentController {
 
   @Get()
   async getCatalog(
+    @Req() req: Request,
     @Query('type') type?: 'note' | 'pyq',
     @Query('category') category?: string,
     @Query('semester') semester?: string,
@@ -27,10 +28,11 @@ export class ContentController {
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
+    const user = req['user'];
     const sem = semester ? parseInt(semester, 10) : undefined;
     const lim = limit ? parseInt(limit, 10) : 10;
     const off = offset ? parseInt(offset, 10) : 0;
-    return this.contentService.getCatalog(type, category, sem, subject, lim, off);
+    return this.contentService.getCatalog(user.id, user.role, type, category, sem, subject, lim, off);
   }
 
   @Get('bundles')

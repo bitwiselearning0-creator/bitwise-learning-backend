@@ -58,6 +58,8 @@ export class AdminService {
     year: number | null,
     fileKey: string,
     price: number,
+    courseId?: string,
+    subjectId?: string,
   ) {
     const uniqueId = Math.random().toString(36).substring(2, 9);
     const key = `notes/${uniqueId}_${Date.now()}.pdf`;
@@ -76,8 +78,8 @@ export class AdminService {
     }
 
     const queryText = `
-      INSERT INTO contents (title, description, type, category, semester, subject, year, file_key, price)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      INSERT INTO contents (title, description, type, category, semester, subject, year, file_key, price, course_id, subject_id)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *;
     `;
     const res = await this.db.query(queryText, [
@@ -90,6 +92,8 @@ export class AdminService {
       year,
       key,
       price,
+      courseId || null,
+      subjectId || null,
     ]);
     return res.rows[0];
   }
@@ -156,7 +160,7 @@ export class AdminService {
 
   async getVideosList() {
     const res = await this.db.query(
-      'SELECT id, title, description, youtube_video_id, playlist_name, sequence_order, hls_url FROM videos ORDER BY playlist_name, sequence_order ASC'
+      'SELECT id, title, description, youtube_video_id, playlist_name, sequence_order, hls_url, course_id AS "courseId", semester, subject_id AS "subjectId", unit FROM videos ORDER BY playlist_name, sequence_order ASC'
     );
     return res.rows.map((row) => ({
       id: row.id,
@@ -166,6 +170,10 @@ export class AdminService {
       playlistName: row.playlist_name,
       sequenceOrder: row.sequence_order,
       hlsUrl: row.hls_url,
+      courseId: row.courseId,
+      semester: row.semester,
+      subjectId: row.subjectId,
+      unit: row.unit,
     }));
   }
 
@@ -176,11 +184,15 @@ export class AdminService {
     playlistName: string,
     sequenceOrder: number,
     hlsUrl: string,
+    courseId?: string,
+    semester?: number,
+    subjectId?: string,
+    unit?: number,
   ) {
     const res = await this.db.query(
-      `INSERT INTO videos (title, description, youtube_video_id, playlist_name, sequence_order, hls_url)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [title, description, youtubeVideoId, playlistName, sequenceOrder, hlsUrl]
+      `INSERT INTO videos (title, description, youtube_video_id, playlist_name, sequence_order, hls_url, course_id, semester, subject_id, unit)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      [title, description, youtubeVideoId, playlistName, sequenceOrder, hlsUrl, courseId || null, semester || null, subjectId || null, unit || null]
     );
     return res.rows[0];
   }
@@ -360,5 +372,37 @@ export class AdminService {
   async archiveBundle(id: string, archive: boolean) {
     await this.db.query('UPDATE bundles SET is_archived = $1 WHERE id = $2', [archive, id]);
     return { success: true, message: `Bundle ${archive ? 'archived' : 'restored'} successfully` };
+  }
+
+  async getToppersPassContentIds() {
+    const res = await this.db.query(
+      "SELECT content_id AS \"contentId\" FROM bundle_contents WHERE bundle_id = '00000000-0000-0000-0000-000000000000'"
+    );
+    return res.rows.map((row) => row.contentId);
+  }
+
+  async updateToppersPassContentIds(contentIds: string[]) {
+    return this.db.transaction(async (client) => {
+      // 1. Ensure bundle exists
+      await client.query(`
+        INSERT INTO bundles (id, title, description, price, course_id, semester, is_archived, is_available)
+        VALUES ('00000000-0000-0000-0000-000000000000', 'Toppers'' Royal Pass', 'All premium study notes, PYQ solutions and secure videos bundle.', 499.00, NULL, NULL, FALSE, TRUE)
+        ON CONFLICT (id) DO NOTHING
+      `);
+
+      // 2. Clear old mappings
+      await client.query("DELETE FROM bundle_contents WHERE bundle_id = '00000000-0000-0000-0000-000000000000'");
+
+      // 3. Map new contents
+      if (contentIds && contentIds.length > 0) {
+        for (const contentId of contentIds) {
+          await client.query(
+            "INSERT INTO bundle_contents (bundle_id, content_id) VALUES ('00000000-0000-0000-0000-000000000000', $1)",
+            [contentId]
+          );
+        }
+      }
+      return { success: true };
+    });
   }
 }
