@@ -20,36 +20,17 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       ? { rejectUnauthorized: false }
       : undefined;
 
-    const poolConfig: any = {
+    this.pool = new Pool({
       host,
       port,
       database,
       user,
       password,
       ssl,
-      max: 20,
+      max: 20, // max connection pool size
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,
-    };
-
-    if (host.endsWith('.supabase.co')) {
-      const dns = require('dns');
-      poolConfig.lookup = (hostname, options, callback) => {
-        let cb = callback;
-        if (typeof options === 'function') {
-          cb = options;
-        }
-        dns.lookup('aws-0-ap-northeast-1.pooler.supabase.com', { family: 4 }, (err, address) => {
-          if (err) {
-            cb(err);
-          } else {
-            cb(null, address, 4);
-          }
-        });
-      };
-    }
-
-    this.pool = new Pool(poolConfig);
+    });
 
     this.logger.log('PostgreSQL Connection Pool initialized');
   }
