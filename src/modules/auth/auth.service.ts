@@ -204,4 +204,13 @@ export class AuthService {
     }
     throw new UnauthorizedException('Invalid email or password');
   }
+
+  async testDatabaseConnection() {
+    try {
+      await this.db.query('SELECT 1');
+      return { status: 'ok', message: 'Database connection successful' };
+    } catch (err) {
+      return { status: 'error', message: err.message };
+    }
+  }
 }

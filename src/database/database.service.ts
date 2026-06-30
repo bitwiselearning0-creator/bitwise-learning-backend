@@ -15,7 +15,8 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     const database = this.configService.get<string>('DB_NAME', 'bitwise_learning');
     const user = this.configService.get<string>('DB_USER', 'postgres');
     const password = this.configService.get<string>('DB_PASSWORD', 'postgres');
-    const ssl = this.configService.get<string>('DB_SSL') === 'true'
+    const dbSsl = this.configService.get<any>('DB_SSL');
+    const ssl = (dbSsl === 'true' || dbSsl === true)
       ? { rejectUnauthorized: false }
       : undefined;
 
