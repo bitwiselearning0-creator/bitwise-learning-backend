@@ -35,11 +35,15 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     if (host.endsWith('.supabase.co')) {
       const dns = require('dns');
       poolConfig.lookup = (hostname, options, callback) => {
+        let cb = callback;
+        if (typeof options === 'function') {
+          cb = options;
+        }
         dns.lookup('aws-0-ap-northeast-1.pooler.supabase.com', { family: 4 }, (err, address) => {
           if (err) {
-            callback(err);
+            cb(err);
           } else {
-            callback(null, address, 4);
+            cb(null, address, 4);
           }
         });
       };
