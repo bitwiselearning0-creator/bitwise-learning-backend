@@ -44,6 +44,16 @@ export class MetadataController {
     const res = await this.db.query(
       'SELECT id, title, message, created_at AS "createdAt" FROM announcements ORDER BY created_at DESC'
     );
+    if (res.rows.length === 0) {
+      return [
+        {
+          id: 'default_welcome_announcement',
+          title: 'Welcome to Bitwise Learning!',
+          message: 'Explore your course modules, lecture notes, and video classes to boost your computer science preparation.',
+          createdAt: new Date().toISOString(),
+        }
+      ];
+    }
     return res.rows;
   }
 }
