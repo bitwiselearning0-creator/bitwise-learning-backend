@@ -4,12 +4,17 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EncryptionInterceptor } from './common/interceptors/encryption.interceptor';
 import helmet from 'helmet';
+import * as express from 'express';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule, {
     rawBody: true,
+    bodyParser: false,
   });
+
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT', 3000);
