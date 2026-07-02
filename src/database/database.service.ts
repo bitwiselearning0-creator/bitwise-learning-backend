@@ -32,6 +32,19 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       ? { rejectUnauthorized: false }
       : undefined;
 
+    let resolvedIp: string | null = null;
+    if (host.endsWith('.supabase.co')) {
+      const dns = require('dns');
+      dns.lookup('aws-1-ap-northeast-1.pooler.supabase.com', { family: 4 }, (err: any, ip: string) => {
+        if (!err && ip) {
+          resolvedIp = ip;
+          this.logger.log(`Pre-resolved Supabase pooler IP: ${resolvedIp}`);
+        } else {
+          this.logger.error('Failed to pre-resolve Supabase pooler IP', err?.stack);
+        }
+      });
+    }
+
     const poolConfig: any = {
       host,
       port,
@@ -43,6 +56,22 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,
     };
+
+    if (host.endsWith('.supabase.co')) {
+      poolConfig.stream = (options: any) => {
+        const net = require('net');
+        const socket = new net.Socket();
+        socket.connect = function(connPort: any, connHost: any, cb: any) {
+          const targetHost = resolvedIp || 'aws-1-ap-northeast-1.pooler.supabase.com';
+          return net.Socket.prototype.connect.call(this, {
+            port: connPort,
+            host: targetHost,
+            localAddress: options.localAddress
+          }, cb);
+        };
+        return socket;
+      };
+    }
 
     this.pool = new Pool(poolConfig);
 
