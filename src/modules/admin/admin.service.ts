@@ -3,6 +3,7 @@ import { DatabaseService } from '../../database/database.service';
 import { R2Service } from '../../common/services/r2.service';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class AdminService {
@@ -112,6 +113,15 @@ export class AdminService {
       userId,
     ]);
     return { success: true, message: 'Device binding reset successful' };
+  }
+
+  async resetUserPassword(userId: string, newPassword: string) {
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.db.query('UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [
+      passwordHash,
+      userId,
+    ]);
+    return { success: true, message: 'Password reset successful' };
   }
 
   async getContentsList() {

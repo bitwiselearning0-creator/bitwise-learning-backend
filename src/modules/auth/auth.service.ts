@@ -1,8 +1,9 @@
-import { Injectable, UnauthorizedException, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ForbiddenException, ConflictException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { DatabaseService } from '../../database/database.service';
 import * as admin from 'firebase-admin';
 import { ConfigService } from '@nestjs/config';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class AuthService {
@@ -160,6 +161,51 @@ export class AuthService {
     }
   }
 
+  async registerStudent(data: any) {
+    const { email, fullName, password, phoneNumber, deviceId } = data;
+
+    return this.db.transaction(async (client) => {
+      // Check if user already exists
+      const userQuery = await client.query(
+        'SELECT id FROM users WHERE email = $1',
+        [email]
+      );
+
+      if (userQuery.rows.length > 0) {
+        throw new ConflictException('Email is already registered');
+      }
+
+      // Hash the password
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      // Insert user
+      const insertQuery = await client.query(
+        `INSERT INTO users (email, full_name, password_hash, phone_number, device_id, role, status)
+         VALUES ($1, $2, $3, $4, $5, 'user', 'active')
+         RETURNING id, email, full_name, role, status, device_id`,
+        [email, fullName, passwordHash, phoneNumber, deviceId]
+      );
+      const user = insertQuery.rows[0];
+
+      // Generate access and refresh tokens
+      const payload = { sub: user.id, email: user.email, role: user.role };
+      const accessToken = await this.jwtService.signAsync(payload, { expiresIn: '15m' });
+      const refreshToken = await this.jwtService.signAsync(payload, { expiresIn: '30d' });
+
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          fullName: user.full_name,
+          role: user.role,
+          deviceId: user.device_id,
+        },
+        accessToken,
+        refreshToken,
+      };
+    });
+  }
+
   async loginWithEmailPassword(email: string, password: string, deviceId: string) {
     if (email === 'admin@bitwise.com' && password === 'admin123') {
       return this.db.transaction(async (client) => {
@@ -171,10 +217,10 @@ export class AuthService {
         let user;
         if (userQuery.rows.length === 0) {
           const insertQuery = await client.query(
-            `INSERT INTO users (email, full_name, firebase_uid, role, status, device_id)
-             VALUES ($1, 'Admin Toppers', $2, 'admin', 'active', $3)
+            `INSERT INTO users (email, full_name, role, status, device_id)
+             VALUES ($1, 'Admin Toppers', 'admin', 'active', $2)
              RETURNING id, email, full_name, role, status, device_id`,
-            [email, 'mock_uid_admin@bitwise.com', deviceId]
+            [email, deviceId]
           );
           user = insertQuery.rows[0];
         } else {
@@ -202,7 +248,62 @@ export class AuthService {
         };
       });
     }
-    throw new UnauthorizedException('Invalid email or password');
+
+    return this.db.transaction(async (client) => {
+      const userQuery = await client.query(
+        'SELECT id, email, full_name, role, status, device_id, password_hash FROM users WHERE email = $1',
+        [email]
+      );
+
+      if (userQuery.rows.length === 0) {
+        throw new UnauthorizedException('Invalid email or password');
+      }
+
+      const user = userQuery.rows[0];
+
+      if (user.status === 'banned') {
+        throw new ForbiddenException('Your account has been banned');
+      }
+
+      if (!user.password_hash) {
+        throw new UnauthorizedException('Password not set for this account. Please register.');
+      }
+
+      const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('Invalid email or password');
+      }
+
+      if (user.role !== 'admin') {
+        if (user.device_id && user.device_id !== deviceId) {
+          throw new ForbiddenException(
+            'Device binding violation: Account is locked to another device.'
+          );
+        } else if (!user.device_id) {
+          await client.query(
+            'UPDATE users SET device_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+            [deviceId, user.id]
+          );
+          user.device_id = deviceId;
+        }
+      }
+
+      const payload = { sub: user.id, email: user.email, role: user.role };
+      const accessToken = await this.jwtService.signAsync(payload, { expiresIn: '15m' });
+      const refreshToken = await this.jwtService.signAsync(payload, { expiresIn: '30d' });
+
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          fullName: user.full_name,
+          role: user.role,
+          deviceId: user.device_id,
+        },
+        accessToken,
+        refreshToken,
+      };
+    });
   }
 
   async testDatabaseConnection() {

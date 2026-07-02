@@ -52,6 +52,14 @@ export class AuthController {
     return this.authService.loginWithGoogle(idToken, deviceId);
   }
 
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  async register(
+    @Body() body: any,
+  ) {
+    return this.authService.registerStudent(body);
+  }
+
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(

@@ -120,6 +120,12 @@ export class AdminController {
     return this.adminService.resetDeviceBind(userId);
   }
 
+  @Post('users/:id/reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetUserPassword(@Param('id') userId: string, @Body('newPassword') newPassword: string) {
+    return this.adminService.resetUserPassword(userId, newPassword);
+  }
+
   // Courses Administrative CRUD
   @Post('courses')
   async createCourse(
