@@ -12,6 +12,8 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   onModuleInit() {
     const rawHost = this.configService.get<string>('DB_HOST', 'localhost');
     const host = typeof rawHost === 'string' ? rawHost.replace(/['"]/g, '').trim() : rawHost;
+    this.logger.log(`DB Host parsed: [${host}]`);
+    this.logger.log(`Is Supabase: ${host.endsWith('.supabase.co')}`);
 
     const port = this.configService.get<number>('DB_PORT', 5432);
 
