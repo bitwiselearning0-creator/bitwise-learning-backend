@@ -10,13 +10,23 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   constructor(private configService: ConfigService) {}
 
   onModuleInit() {
-    const host = this.configService.get<string>('DB_HOST', 'localhost');
+    const rawHost = this.configService.get<string>('DB_HOST', 'localhost');
+    const host = typeof rawHost === 'string' ? rawHost.replace(/['"]/g, '').trim() : rawHost;
+
     const port = this.configService.get<number>('DB_PORT', 5432);
-    const database = this.configService.get<string>('DB_NAME', 'bitwise_learning');
-    const user = this.configService.get<string>('DB_USER', 'postgres');
-    const password = this.configService.get<string>('DB_PASSWORD', 'postgres');
+
+    const rawDatabase = this.configService.get<string>('DB_NAME', 'bitwise_learning');
+    const database = typeof rawDatabase === 'string' ? rawDatabase.replace(/['"]/g, '').trim() : rawDatabase;
+
+    const rawUser = this.configService.get<string>('DB_USER', 'postgres');
+    const user = typeof rawUser === 'string' ? rawUser.replace(/['"]/g, '').trim() : rawUser;
+
+    const rawPassword = this.configService.get<string>('DB_PASSWORD', 'postgres');
+    const password = typeof rawPassword === 'string' ? rawPassword.replace(/['"]/g, '').trim() : rawPassword;
+
     const dbSsl = this.configService.get<any>('DB_SSL');
-    const ssl = (dbSsl === 'true' || dbSsl === true)
+    const sslStr = typeof dbSsl === 'string' ? dbSsl.replace(/['"]/g, '').trim() : String(dbSsl);
+    const ssl = (sslStr === 'true' || dbSsl === true)
       ? { rejectUnauthorized: false }
       : undefined;
 
