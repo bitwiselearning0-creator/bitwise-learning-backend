@@ -83,7 +83,7 @@ export class AdminController {
   async createContent(
     @Body('title') title: string,
     @Body('description') description: string,
-    @Body('type') type: 'note' | 'pyq',
+    @Body('type') type: 'note' | 'pyq' | 'trend_analysis' | 'pyq_solution',
     @Body('category') category: string,
     @Body('semester') semester: number,
     @Body('subject') subject: string,

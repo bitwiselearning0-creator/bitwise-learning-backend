@@ -52,7 +52,7 @@ export class AdminService {
   async createContent(
     title: string,
     description: string,
-    type: 'note' | 'pyq',
+    type: 'note' | 'pyq' | 'trend_analysis' | 'pyq_solution',
     category: string,
     semester: number,
     subject: string,
