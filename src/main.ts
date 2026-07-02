@@ -16,7 +16,7 @@ const originalLookup = dns.lookup;
     opts = {};
   }
 
-  const cleanHost = hostname.replace(/['"]/g, '').trim();
+  const cleanHost = typeof hostname === 'string' ? hostname.replace(/['"]/g, '').trim() : '';
   const targetHost = process.env.DB_HOST ? process.env.DB_HOST.replace(/['"]/g, '').trim() : '';
 
   if (targetHost && cleanHost === targetHost && cleanHost.endsWith('.supabase.co')) {
