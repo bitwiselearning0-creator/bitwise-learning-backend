@@ -182,7 +182,11 @@ export class ContentService {
     const fileKey = contentRes.rows[0].file_key;
 
     if (this.r2Service.isConfigured()) {
-      return this.r2Service.getFileStream(fileKey);
+      try {
+        return await this.r2Service.getFileStream(fileKey);
+      } catch (err) {
+        this.logger.error(`Failed to get file stream from R2: Key=${fileKey}, error=${err.message}. Falling back to local file serving.`);
+      }
     }
 
     const localDir = path.resolve(__dirname, '../../../../storage');

@@ -65,16 +65,29 @@ export class AdminService {
     const uniqueId = Math.random().toString(36).substring(2, 9);
     const key = `notes/${uniqueId}_${Date.now()}.pdf`;
 
+    let base64Clean = fileKey;
+    if (fileKey.includes('base64,')) {
+      base64Clean = fileKey.split('base64,')[1];
+    }
+
+    let uploadedToR2 = false;
     if (this.r2Service.isConfigured()) {
-      await this.r2Service.uploadFile(key, fileKey);
-    } else {
+      try {
+        await this.r2Service.uploadFile(key, base64Clean);
+        uploadedToR2 = true;
+      } catch (err) {
+        this.logger.error(`R2 upload failed: ${err.message}. Falling back to local storage.`);
+      }
+    }
+
+    if (!uploadedToR2) {
       const localDir = path.resolve(__dirname, '../../../../storage');
       const filePath = path.join(localDir, key);
       const parentDir = path.dirname(filePath);
       if (!fs.existsSync(parentDir)) {
         fs.mkdirSync(parentDir, { recursive: true });
       }
-      fs.writeFileSync(filePath, Buffer.from(fileKey, 'base64'));
+      fs.writeFileSync(filePath, Buffer.from(base64Clean, 'base64'));
       this.logger.log(`Successfully saved local file: Path=${filePath}`);
     }
 
@@ -151,15 +164,15 @@ export class AdminService {
         } catch (e) {
           this.logger.error(`Failed to delete file from R2: Key=${fileKey}`, e.stack);
         }
-      } else {
-        const localDir = path.resolve(__dirname, '../../../../storage');
-        const filePath = path.join(localDir, fileKey);
-        if (fs.existsSync(filePath)) {
-          try {
-            fs.unlinkSync(filePath);
-          } catch (e) {
-            this.logger.error(`Failed to delete local file: Path=${filePath}`, e.stack);
-          }
+      }
+      
+      const localDir = path.resolve(__dirname, '../../../../storage');
+      const filePath = path.join(localDir, fileKey);
+      if (fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+        } catch (e) {
+          this.logger.error(`Failed to delete local file: Path=${filePath}`, e.stack);
         }
       }
     }
