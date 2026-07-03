@@ -137,6 +137,15 @@ export class AdminService {
     return { success: true, message: 'Password reset successful' };
   }
 
+  async changeUserRole(userId: string, role: string) {
+    const dbRole = role === 'student' ? 'user' : role;
+    await this.db.query('UPDATE users SET role = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [
+      dbRole,
+      userId,
+    ]);
+    return { success: true, message: 'User role updated successfully' };
+  }
+
   async getContentsList() {
     const res = await this.db.query(
       'SELECT id, title, description, type, category, semester, subject, year, price FROM contents ORDER BY created_at DESC'

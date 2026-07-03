@@ -126,6 +126,12 @@ export class AdminController {
     return this.adminService.resetUserPassword(userId, newPassword);
   }
 
+  @Post('users/:id/role')
+  @HttpCode(HttpStatus.OK)
+  async changeUserRole(@Param('id') userId: string, @Body('role') role: string) {
+    return this.adminService.changeUserRole(userId, role);
+  }
+
   // Courses Administrative CRUD
   @Post('courses')
   async createCourse(
